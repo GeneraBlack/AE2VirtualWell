@@ -5,7 +5,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.util.GenericContainerHelper;
 import de.project.ae2virtualwell.registry.ModRecipes;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -43,7 +43,7 @@ public class WellDropRegistry {
 
         // Check if milk is registered as a fluid (e.g. neoforge:milk)
         for (Fluid fluid : BuiltInRegistries.FLUID) {
-            Identifier id = BuiltInRegistries.FLUID.getKey(fluid);
+            ResourceLocation id = BuiltInRegistries.FLUID.getKey(fluid);
             if (id != null && id.getPath().equals("milk")) {
                 BUILTIN_DROPS.put(normalizeFluid(fluid), List.of(
                         new WellDropEntry(normalizeFluid(fluid), 100, 1000, 1000)
@@ -89,7 +89,7 @@ public class WellDropRegistry {
         }
         if (stack.is(Items.MILK_BUCKET)) {
             for (Fluid fluid : BuiltInRegistries.FLUID) {
-                Identifier id = BuiltInRegistries.FLUID.getKey(fluid);
+                ResourceLocation id = BuiltInRegistries.FLUID.getKey(fluid);
                 if (id != null && id.getPath().equals("milk")) {
                     return normalizeFluid(fluid);
                 }
@@ -111,11 +111,11 @@ public class WellDropRegistry {
         }
 
         // 1. Check custom datapack recipes using fluid's bucket item
-        if (level != null && level.getServer() != null) {
+        if (level != null) {
             ItemStack bucketStack = new ItemStack(normalized.getBucket());
             if (!bucketStack.isEmpty()) {
                 SingleRecipeInput input = new SingleRecipeInput(bucketStack);
-                Optional<RecipeHolder<WellDropRecipe>> match = level.getServer().getRecipeManager().getRecipeFor(
+                Optional<RecipeHolder<WellDropRecipe>> match = level.getRecipeManager().getRecipeFor(
                         ModRecipes.WELL_DROP_TYPE.get(),
                         input,
                         level

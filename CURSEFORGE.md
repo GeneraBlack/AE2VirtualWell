@@ -2,7 +2,7 @@
 
 **Bring virtual fluid extraction, automated infinite wells, and digital liquid generation directly into your Applied Energistics 2 ME Network!**
 
-Requires **Applied Energistics 2** and **NeoForge (Minecraft 26.1.2)**.
+Requires **Applied Energistics 2** and **NeoForge (Minecraft 1.21.1)**.
 
 ---
 
@@ -99,6 +99,6 @@ All gameplay values are fully customizable in `config/ae2virtualwell-common.toml
 
 ### 📦 Dependencies
 
-* **Minecraft 26.1.2**
-* **NeoForge 26.1.2.108+**
-* **Applied Energistics 2 (AE2) 26.1.11-beta+**
+* **Minecraft 1.21.1**
+* **NeoForge 21.1.172+**
+* **Applied Energistics 2 (AE2) 19.2.10+**

@@ -24,12 +24,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -42,7 +42,6 @@ import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
 
@@ -125,33 +124,33 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> lines, TooltipFlag flag) {
-        super.appendHoverText(stack, context, display, lines, flag);
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
+        super.appendHoverText(stack, context, lines, flag);
 
         StorageCell cell = StorageCells.getCellInventory(stack, null);
         if (cell instanceof VirtualWellCellInventory wellInv) {
-            lines.accept(Tooltips.bytesUsed(wellInv.getUsedBytes(), wellInv.getTotalBytes()));
-            lines.accept(Tooltips.typesUsed(wellInv.getStoredFluidTypes(), wellInv.getTotalFluidTypes()));
+            lines.add(Tooltips.bytesUsed(wellInv.getUsedBytes(), wellInv.getTotalBytes()));
+            lines.add(Tooltips.typesUsed(wellInv.getStoredFluidTypes(), wellInv.getTotalFluidTypes()));
         } else {
-            lines.accept(Tooltips.bytesUsed(0, tier.getTotalBytes()));
-            lines.accept(Tooltips.typesUsed(0, tier.getTotalTypes()));
+            lines.add(Tooltips.bytesUsed(0, tier.getTotalBytes()));
+            lines.add(Tooltips.typesUsed(0, tier.getTotalTypes()));
         }
 
         int yieldMb = tier.getGenerationMilliBuckets();
         int intervalTicks = VirtualWellConfig.BASE_TICK_INTERVAL.get();
         double seconds = intervalTicks / 20.0;
 
-        lines.accept(Component.translatable("tooltip.ae2virtualwell.tier", tier.getTierName())
+        lines.add(Component.translatable("tooltip.ae2virtualwell.tier", tier.getTierName())
                 .withStyle(ChatFormatting.AQUA));
-        lines.accept(Component.translatable("tooltip.ae2virtualwell.production", yieldMb, String.format(Locale.ROOT, "%.1f", seconds))
+        lines.add(Component.translatable("tooltip.ae2virtualwell.production", yieldMb, String.format(Locale.ROOT, "%.1f", seconds))
                 .withStyle(ChatFormatting.GRAY));
 
         Fluid configured = getConfiguredFluid(stack);
         if (configured != null) {
-            lines.accept(Component.translatable("tooltip.ae2virtualwell.configured_target", getFluidDisplayName(configured))
+            lines.add(Component.translatable("tooltip.ae2virtualwell.configured_target", getFluidDisplayName(configured))
                     .withStyle(ChatFormatting.DARK_AQUA));
         } else {
-            lines.accept(Component.translatable("tooltip.ae2virtualwell.not_configured")
+            lines.add(Component.translatable("tooltip.ae2virtualwell.not_configured")
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
     }
@@ -227,8 +226,8 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                 if (!level.isClientSide()) {
                     ItemStack stack = context.getItemInHand();
                     stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
-                    player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
-                            getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA));
+                    player.displayClientMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
+                            getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA), true);
                 }
                 return InteractionResult.SUCCESS;
             }
@@ -237,7 +236,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
     }
 
     @Override
-    public InteractionResult use(Level level, Player player, InteractionHand hand) {
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         InteractionHand otherHand = hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
         ItemStack otherStack = player.getItemInHand(otherHand);
@@ -249,10 +248,10 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                 if (WellDropRegistry.isValidFluidTarget(fluid)) {
                     if (!level.isClientSide()) {
                         stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
-                        player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.configured",
-                                getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA));
+                        player.displayClientMessage(Component.translatable("message.ae2virtualwell.configured",
+                                getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA), true);
                     }
-                    return InteractionResult.SUCCESS;
+                    return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
                 }
             }
 
@@ -266,10 +265,10 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                     if (WellDropRegistry.isValidFluidTarget(fluid)) {
                         if (!level.isClientSide()) {
                             stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
-                            player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
-                                    getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA));
+                            player.displayClientMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
+                                    getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA), true);
                         }
-                        return InteractionResult.SUCCESS;
+                        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
                     }
                 }
             }
@@ -278,10 +277,10 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
             if (otherStack.isEmpty()) {
                 if (!level.isClientSide()) {
                     stack.remove(AEComponents.STORAGE_CELL_CONFIG_INV);
-                    player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.cleared")
-                            .withStyle(ChatFormatting.RED));
+                    player.displayClientMessage(Component.translatable("message.ae2virtualwell.cleared")
+                            .withStyle(ChatFormatting.RED), true);
                 }
-                return InteractionResult.SUCCESS;
+                return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
             }
         }
 

@@ -3,11 +3,11 @@
 <div align="center">
   <img src="logo.png" alt="AE2 Virtual Well Logo" width="200" height="200" />
 
-  **Virtual Fluid & Liquid Generation inside your ME Network for Minecraft 26.1.2 (NeoForge)**
+  **Virtual Fluid & Liquid Generation inside your ME Network for Minecraft 1.21.1 (NeoForge)**
 
-  [![Minecraft](https://img.shields.io/badge/Minecraft-26.1.2-brightgreen.svg)](https://minecraft.net/)
-  [![NeoForge](https://img.shields.io/badge/NeoForge-26.1.2-orange.svg)](https://neoforged.net/)
-  [![Applied Energistics 2](https://img.shields.io/badge/Applied%20Energistics%202-26.1.11--beta-blue.svg)](https://appliedenergistics.org/)
+  [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen.svg)](https://minecraft.net/)
+  [![NeoForge](https://img.shields.io/badge/NeoForge-21.1.172-orange.svg)](https://neoforged.net/)
+  [![Applied Energistics 2](https://img.shields.io/badge/Applied%20Energistics%202-19.2.10-blue.svg)](https://appliedenergistics.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 </div>
 
@@ -15,7 +15,7 @@
 
 ## 💧 About
 
-**AE2 Virtual Well** is an official-style companion addon for **Applied Energistics 2** on **Minecraft 26.1.2 (NeoForge)**. It bridges digital ME network storage and virtual liquid extraction by introducing generative **Virtual Well Storage Cells**.
+**AE2 Virtual Well** is an official-style companion addon for **Applied Energistics 2** on **Minecraft 1.21.1 (NeoForge)**. It bridges digital ME network storage and virtual liquid extraction by introducing generative **Virtual Well Storage Cells**.
 
 Insert a trained Well Cell into any standard **ME Drive** or **ME Chest**, supply AE power, and watch it generate water, lava, milk, or modded liquids directly into the cell every 3 seconds (60 ticks)!
 
