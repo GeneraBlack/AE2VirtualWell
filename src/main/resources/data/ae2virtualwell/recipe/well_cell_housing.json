@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GRG",
+    "RBR",
+    "III"
+  ],
+  "key": {
+    "G": { "item": "ae2:quartz_glass" },
+    "R": { "item": "minecraft:redstone" },
+    "B": { "item": "minecraft:bucket" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "id": "ae2virtualwell:well_cell_housing",
+    "count": 1
+  }
+}

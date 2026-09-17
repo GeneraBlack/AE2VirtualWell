@@ -1,0 +1,15 @@
+{
+  "type": "ae2virtualwell:well_drop",
+  "target": {
+    "item": "minecraft:lava_bucket"
+  },
+  "min_tier": 2,
+  "drops": [
+    {
+      "fluid": "minecraft:lava",
+      "weight": 100,
+      "min_milli_buckets": 1000,
+      "max_milli_buckets": 1000
+    }
+  ]
+}

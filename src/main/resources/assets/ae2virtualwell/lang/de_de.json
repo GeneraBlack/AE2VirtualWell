@@ -1,0 +1,25 @@
+{
+  "itemGroup.ae2virtualwell": "AE2 Virtueller Brunnen",
+
+  "item.ae2virtualwell.well_cell_housing": "Virtuelles Brunnengäuse",
+  "item.ae2virtualwell.well_cell_component_1k": "1k Brunnen-Speicherkomponente",
+  "item.ae2virtualwell.well_cell_component_4k": "4k Brunnen-Speicherkomponente",
+  "item.ae2virtualwell.well_cell_component_16k": "16k Brunnen-Speicherkomponente",
+  "item.ae2virtualwell.well_cell_component_64k": "64k Brunnen-Speicherkomponente",
+  "item.ae2virtualwell.well_cell_component_256k": "256k Brunnen-Speicherkomponente",
+
+  "item.ae2virtualwell.well_storage_cell_1k": "1k Virtuelle Brunnen-Speicherzelle",
+  "item.ae2virtualwell.well_storage_cell_4k": "4k Virtuelle Brunnen-Speicherzelle",
+  "item.ae2virtualwell.well_storage_cell_16k": "16k Virtuelle Brunnen-Speicherzelle",
+  "item.ae2virtualwell.well_storage_cell_64k": "64k Virtuelle Brunnen-Speicherzelle",
+  "item.ae2virtualwell.well_storage_cell_256k": "256k Virtuelle Brunnen-Speicherzelle",
+
+  "tooltip.ae2virtualwell.tier": "Stufe: %s",
+  "tooltip.ae2virtualwell.production": "Ertrag: %s mB alle %s Sekunden",
+  "tooltip.ae2virtualwell.configured_target": "Angelernte Flüssigkeit: %s",
+  "tooltip.ae2virtualwell.not_configured": "Keine Flüssigkeit angelernt! Schleichen + Rechtsklick mit Flüssigkeitsbehälter oder auf Flüssigkeit in der Welt.",
+
+  "message.ae2virtualwell.configured": "Virtuelle Brunnen-Zelle angelernt auf: %s",
+  "message.ae2virtualwell.sampled_configured": "Flüssigkeit entnommen und Zelle angelernt auf: %s",
+  "message.ae2virtualwell.cleared": "Brunnen-Zellen-Konfiguration gelöscht."
+}

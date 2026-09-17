@@ -1,0 +1,25 @@
+{
+  "itemGroup.ae2virtualwell": "AE2 Virtual Well",
+
+  "item.ae2virtualwell.well_cell_housing": "Virtual Well Cell Housing",
+  "item.ae2virtualwell.well_cell_component_1k": "1k Well Storage Component",
+  "item.ae2virtualwell.well_cell_component_4k": "4k Well Storage Component",
+  "item.ae2virtualwell.well_cell_component_16k": "16k Well Storage Component",
+  "item.ae2virtualwell.well_cell_component_64k": "64k Well Storage Component",
+  "item.ae2virtualwell.well_cell_component_256k": "256k Well Storage Component",
+
+  "item.ae2virtualwell.well_storage_cell_1k": "1k Virtual Well Storage Cell",
+  "item.ae2virtualwell.well_storage_cell_4k": "4k Virtual Well Storage Cell",
+  "item.ae2virtualwell.well_storage_cell_16k": "16k Virtual Well Storage Cell",
+  "item.ae2virtualwell.well_storage_cell_64k": "64k Virtual Well Storage Cell",
+  "item.ae2virtualwell.well_storage_cell_256k": "256k Virtual Well Storage Cell",
+
+  "tooltip.ae2virtualwell.tier": "Tier: %s",
+  "tooltip.ae2virtualwell.production": "Yield: %s mB every %s seconds",
+  "tooltip.ae2virtualwell.configured_target": "Trained Liquid: %s",
+  "tooltip.ae2virtualwell.not_configured": "No liquid trained! Sneak + Right-Click with a fluid container or on a liquid in the world.",
+
+  "message.ae2virtualwell.configured": "Trained Virtual Well Cell to: %s",
+  "message.ae2virtualwell.sampled_configured": "Sampled liquid and trained Virtual Well Cell to: %s",
+  "message.ae2virtualwell.cleared": "Virtual Well Cell training cleared."
+}

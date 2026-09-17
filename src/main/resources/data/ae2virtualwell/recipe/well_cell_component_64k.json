@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "ACA"
+  ],
+  "key": {
+    "A": { "item": "minecraft:redstone" },
+    "B": { "item": "ae2:calculation_processor" },
+    "C": { "item": "ae2virtualwell:well_cell_component_16k" },
+    "D": { "item": "ae2:quartz_glass" }
+  },
+  "result": {
+    "id": "ae2virtualwell:well_cell_component_64k",
+    "count": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "ae2virtualwell:well_cell_housing" },
+    { "item": "ae2virtualwell:well_cell_component_64k" }
+  ],
+  "result": {
+    "id": "ae2virtualwell:well_storage_cell_64k",
+    "count": 1
+  }
+}
