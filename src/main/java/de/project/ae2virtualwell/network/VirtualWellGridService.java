@@ -112,7 +112,8 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
                 break;
             }
 
-            int stepMb = Math.min(remainingMb, Math.max(1, entry.minMilliBuckets()));
+            int rolledMb = entry.rollAmount(random);
+            int stepMb = Math.min(remainingMb, rolledMb);
             AEFluidKey key = AEFluidKey.of(entry.fluid());
 
             // Test if the cell has space to accept this liquid

@@ -46,10 +46,13 @@ public class VirtualWellCellInventory implements IVirtualWellCell {
         if (stacks != null) {
             for (GenericStack entry : stacks) {
                 if (entry != null && entry.amount() > 0 && entry.what() instanceof AEFluidKey) {
-                    this.storedAmounts.put(entry.what(), entry.amount());
-                    this.storedFluidAmount += entry.amount();
+                    this.storedAmounts.mergeLong(entry.what(), entry.amount(), Long::sum);
                 }
             }
+        }
+        this.storedFluidAmount = 0;
+        for (long amt : this.storedAmounts.values()) {
+            this.storedFluidAmount += amt;
         }
         this.storedTypes = this.storedAmounts.size();
     }
@@ -255,7 +258,20 @@ public class VirtualWellCellInventory implements IVirtualWellCell {
         }
 
         Fluid fluid = WellDropRegistry.normalizeFluid(fluidKey.getFluid());
-        if (!fluid.equals(configuredTarget)) {
+        boolean allowed = false;
+        if (fluid.equals(configuredTarget)) {
+            allowed = true;
+        } else {
+            List<de.project.ae2virtualwell.recipe.WellDropEntry> drops = WellDropRegistry.getDropEntries(configuredTarget, null);
+            for (var entry : drops) {
+                if (WellDropRegistry.normalizeFluid(entry.fluid()).equals(fluid)) {
+                    allowed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!allowed) {
             return 0;
         }
 

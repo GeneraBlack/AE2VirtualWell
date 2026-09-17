@@ -31,9 +31,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -88,7 +93,10 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
         stack.set(AEComponents.STORAGE_CELL_FUZZY_MODE, mode);
     }
 
-    public static Component getFluidDisplayName(Fluid fluid) {
+    public static Component getFluidDisplayName(@Nullable Fluid fluid) {
+        if (fluid == null) {
+            return Component.empty();
+        }
         try {
             return fluid.getFluidType().getDescription();
         } catch (Throwable ignored) {
@@ -196,26 +204,33 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
         if (player != null && player.isShiftKeyDown()) {
             Level level = context.getLevel();
             BlockPos clickedPos = context.getClickedPos();
-            BlockPos targetPos = clickedPos;
+            BlockState blockState = level.getBlockState(clickedPos);
 
-            FluidState state = level.getFluidState(clickedPos);
-            if (state.isEmpty()) {
-                // Check adjacent block in clicked direction
-                targetPos = clickedPos.relative(context.getClickedFace());
-                state = level.getFluidState(targetPos);
+            Fluid fluid = null;
+            if (blockState.is(Blocks.WATER_CAULDRON)) {
+                fluid = net.minecraft.world.level.material.Fluids.WATER;
+            } else if (blockState.is(Blocks.LAVA_CAULDRON)) {
+                fluid = net.minecraft.world.level.material.Fluids.LAVA;
+            } else {
+                FluidState state = level.getFluidState(clickedPos);
+                if (state.isEmpty()) {
+                    // Check adjacent block in clicked direction
+                    BlockPos targetPos = clickedPos.relative(context.getClickedFace());
+                    state = level.getFluidState(targetPos);
+                }
+                if (!state.isEmpty()) {
+                    fluid = WellDropRegistry.normalizeFluid(state.getType());
+                }
             }
 
-            if (!state.isEmpty()) {
-                Fluid fluid = WellDropRegistry.normalizeFluid(state.getType());
-                if (WellDropRegistry.isValidFluidTarget(fluid)) {
-                    if (!level.isClientSide()) {
-                        ItemStack stack = context.getItemInHand();
-                        stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
-                        player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
-                                getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA));
-                    }
-                    return InteractionResult.SUCCESS;
+            if (WellDropRegistry.isValidFluidTarget(fluid)) {
+                if (!level.isClientSide()) {
+                    ItemStack stack = context.getItemInHand();
+                    stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
+                    player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
+                            getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA));
                 }
+                return InteractionResult.SUCCESS;
             }
         }
         return super.useOn(context);
@@ -228,8 +243,8 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
         ItemStack otherStack = player.getItemInHand(otherHand);
 
         if (player.isShiftKeyDown()) {
+            // 1. Quick-train using fluid container in off-hand
             if (!otherStack.isEmpty()) {
-                // Quick-train using fluid container in off-hand
                 Fluid fluid = WellDropRegistry.extractFluidFromItem(otherStack);
                 if (WellDropRegistry.isValidFluidTarget(fluid)) {
                     if (!level.isClientSide()) {
@@ -239,8 +254,28 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                     }
                     return InteractionResult.SUCCESS;
                 }
-            } else {
-                // Clear configuration
+            }
+
+            // 2. Sample in-world fluid via raycast (both source and flowing liquids)
+            BlockHitResult hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.ANY);
+            if (hitResult.getType() == HitResult.Type.BLOCK) {
+                BlockPos hitPos = hitResult.getBlockPos();
+                FluidState state = level.getFluidState(hitPos);
+                if (!state.isEmpty()) {
+                    Fluid fluid = WellDropRegistry.normalizeFluid(state.getType());
+                    if (WellDropRegistry.isValidFluidTarget(fluid)) {
+                        if (!level.isClientSide()) {
+                            stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
+                            player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
+                                    getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA));
+                        }
+                        return InteractionResult.SUCCESS;
+                    }
+                }
+            }
+
+            // 3. Clear configuration only when clicking air with empty off-hand away from fluids
+            if (otherStack.isEmpty()) {
                 if (!level.isClientSide()) {
                     stack.remove(AEComponents.STORAGE_CELL_CONFIG_INV);
                     player.sendOverlayMessage(Component.translatable("message.ae2virtualwell.cleared")

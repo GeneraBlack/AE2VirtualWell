@@ -18,7 +18,7 @@ on:
       changelog:
         description: "Changelog text"
         required: false
-        default: "Release of AE2 Virtual Well v1.0.0 for Minecraft 26.1.2 (NeoForge)."
+        default: "Release of AE2 Virtual Well for Minecraft 26.1.2 (NeoForge)."
         type: string
 
 jobs:
