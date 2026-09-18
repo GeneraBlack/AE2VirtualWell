@@ -83,7 +83,7 @@ jobs:
           name: "AE2 Virtual Well ${{ steps.version_info.outputs.tag }}"
           version: ${{ steps.version_info.outputs.tag }}
           version-type: ${{ inputs.version_type || 'release' }}
-          changelog: ${{ inputs.changelog || 'Release of AE2 Virtual Well for Minecraft 26.1.2 (NeoForge).' }}
+          changelog: "${{ inputs.changelog || 'Release of AE2 Virtual Well for Minecraft 26.1.2 (NeoForge).' }}"
 
           # Compatibility matrix
           game-versions: |
