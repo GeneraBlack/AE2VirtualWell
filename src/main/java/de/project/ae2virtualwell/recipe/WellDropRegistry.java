@@ -102,23 +102,24 @@ public class WellDropRegistry {
     public static List<WellDropEntry> getDropEntries(Fluid target, @Nullable Level level) {
         Fluid normalized = normalizeFluid(target);
 
-        if (BUILTIN_DROPS.containsKey(normalized)) {
-            return BUILTIN_DROPS.get(normalized);
-        }
-
         if (DYNAMIC_CACHE.containsKey(normalized)) {
             return DYNAMIC_CACHE.get(normalized);
         }
 
-        // 1. Check custom datapack recipes using fluid's bucket item
-        if (level != null) {
+        // 1. Check custom datapack recipes using fluid's bucket item (takes priority over builtin defaults)
+        Level queryLevel = level;
+        if (queryLevel == null && net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() != null) {
+            queryLevel = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().overworld();
+        }
+
+        if (queryLevel != null) {
             ItemStack bucketStack = new ItemStack(normalized.getBucket());
             if (!bucketStack.isEmpty()) {
                 SingleRecipeInput input = new SingleRecipeInput(bucketStack);
-                Optional<RecipeHolder<WellDropRecipe>> match = level.getRecipeManager().getRecipeFor(
+                Optional<RecipeHolder<WellDropRecipe>> match = queryLevel.getRecipeManager().getRecipeFor(
                         ModRecipes.WELL_DROP_TYPE.get(),
                         input,
-                        level
+                        queryLevel
                 );
                 if (match.isPresent()) {
                     List<WellDropEntry> recipeDrops = match.get().value().drops();
@@ -128,11 +129,22 @@ public class WellDropRegistry {
             }
         }
 
-        // 2. Dynamic discovery: any valid registered fluid generates itself
+        // 2. Built-in hardcoded defaults (Water, Lava, Milk) as fallback
+        if (BUILTIN_DROPS.containsKey(normalized)) {
+            List<WellDropEntry> builtin = BUILTIN_DROPS.get(normalized);
+            if (queryLevel != null) {
+                DYNAMIC_CACHE.put(normalized, builtin);
+            }
+            return builtin;
+        }
+
+        // 3. Dynamic discovery: any valid registered fluid generates itself
         List<WellDropEntry> generated = List.of(
                 new WellDropEntry(normalized, 100, 1000, 1000)
         );
-        DYNAMIC_CACHE.put(normalized, generated);
+        if (queryLevel != null) {
+            DYNAMIC_CACHE.put(normalized, generated);
+        }
         return generated;
     }
 
