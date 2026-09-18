@@ -41,7 +41,7 @@ public class AE2VirtualWell {
         modEventBus.addListener(this::commonSetup);
 
         // Clear drop cache on server start or datapack reload so custom recipes update immediately
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.AddReloadListenerEvent event) -> de.project.ae2virtualwell.recipe.WellDropRegistry.clearCache());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.OnDatapackSyncEvent event) -> de.project.ae2virtualwell.recipe.WellDropRegistry.clearCache());
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent event) -> de.project.ae2virtualwell.recipe.WellDropRegistry.clearCache());
     }
 
