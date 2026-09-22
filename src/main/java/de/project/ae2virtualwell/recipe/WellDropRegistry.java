@@ -59,8 +59,52 @@ public class WellDropRegistry {
         return fluid;
     }
 
+    public static boolean isValidFluidTarget(@Nullable Fluid fluid, @Nullable Level level) {
+        if (fluid == null || fluid == Fluids.EMPTY) {
+            return false;
+        }
+        Fluid normalized = normalizeFluid(fluid);
+
+        // 1. Built-in defaults (Water, Lava, Milk)
+        if (BUILTIN_DROPS.containsKey(normalized)) {
+            return true;
+        }
+
+        // 2. Dynamic cache
+        if (DYNAMIC_CACHE.containsKey(normalized)) {
+            return !DYNAMIC_CACHE.get(normalized).isEmpty();
+        }
+
+        // 3. Custom datapack recipes
+        net.minecraft.server.MinecraftServer server = null;
+        if (level != null && level.getServer() != null) {
+            server = level.getServer();
+        } else if (net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() != null) {
+            server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        }
+
+        Level queryLevel = level != null ? level : (server != null ? server.overworld() : null);
+        if (server != null && queryLevel != null) {
+            ItemStack bucketStack = new ItemStack(normalized.getBucket());
+            if (!bucketStack.isEmpty()) {
+                SingleRecipeInput input = new SingleRecipeInput(bucketStack);
+                Optional<RecipeHolder<WellDropRecipe>> match = server.getRecipeManager().getRecipeFor(
+                        ModRecipes.WELL_DROP_TYPE.get(),
+                        input,
+                        queryLevel
+                );
+                if (match.isPresent()) {
+                    return true;
+                }
+            }
+        }
+
+        // 4. Dynamic discovery fallback (only if enabled in config)
+        return de.project.ae2virtualwell.config.VirtualWellConfig.isDynamicFallbackEnabled();
+    }
+
     public static boolean isValidFluidTarget(@Nullable Fluid fluid) {
-        return fluid != null && fluid != Fluids.EMPTY;
+        return isValidFluidTarget(fluid, null);
     }
 
     @Nullable
@@ -106,17 +150,25 @@ public class WellDropRegistry {
             return DYNAMIC_CACHE.get(normalized);
         }
 
-        // 1. Check custom datapack recipes using fluid's bucket item (takes priority over builtin defaults)
-        Level queryLevel = level;
-        if (queryLevel == null && net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() != null) {
-            queryLevel = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().overworld();
+        if (!isValidFluidTarget(normalized, level)) {
+            return Collections.emptyList();
         }
 
-        if (queryLevel != null) {
+        // 1. Check custom datapack recipes using fluid's bucket item (takes priority over builtin defaults)
+        net.minecraft.server.MinecraftServer server = null;
+        if (level != null && level.getServer() != null) {
+            server = level.getServer();
+        } else if (net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() != null) {
+            server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        }
+
+        Level queryLevel = level != null ? level : (server != null ? server.overworld() : null);
+
+        if (server != null && queryLevel != null) {
             ItemStack bucketStack = new ItemStack(normalized.getBucket());
             if (!bucketStack.isEmpty()) {
                 SingleRecipeInput input = new SingleRecipeInput(bucketStack);
-                Optional<RecipeHolder<WellDropRecipe>> match = queryLevel.getRecipeManager().getRecipeFor(
+                Optional<RecipeHolder<WellDropRecipe>> match = server.getRecipeManager().getRecipeFor(
                         ModRecipes.WELL_DROP_TYPE.get(),
                         input,
                         queryLevel
@@ -138,14 +190,21 @@ public class WellDropRegistry {
             return builtin;
         }
 
-        // 3. Dynamic discovery: any valid registered fluid generates itself
-        List<WellDropEntry> generated = List.of(
-                new WellDropEntry(normalized, 100, 1000, 1000)
-        );
-        if (queryLevel != null) {
-            DYNAMIC_CACHE.put(normalized, generated);
+        // 3. Dynamic discovery: only if dynamic fallback is enabled in config
+        if (de.project.ae2virtualwell.config.VirtualWellConfig.isDynamicFallbackEnabled()) {
+            List<WellDropEntry> generated = List.of(
+                    new WellDropEntry(normalized, 100, 1000, 1000)
+            );
+            if (queryLevel != null) {
+                DYNAMIC_CACHE.put(normalized, generated);
+            }
+            return generated;
         }
-        return generated;
+
+        if (queryLevel != null) {
+            DYNAMIC_CACHE.put(normalized, Collections.emptyList());
+        }
+        return Collections.emptyList();
     }
 
     @Nullable

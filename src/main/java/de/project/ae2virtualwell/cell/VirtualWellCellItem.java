@@ -16,12 +16,17 @@ import appeng.core.AEConfig;
 import appeng.core.localization.Tooltips;
 import appeng.items.contents.CellConfig;
 import appeng.items.storage.StorageCellTooltipComponent;
+import appeng.menu.implementations.CellWorkbenchMenu;
 import appeng.util.ConfigInventory;
 import de.project.ae2virtualwell.config.VirtualWellConfig;
 import de.project.ae2virtualwell.recipe.WellDropRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -79,7 +84,129 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
 
     @Override
     public ConfigInventory getConfigInventory(ItemStack stack) {
-        return CellConfig.create(Set.of(AEKeyType.fluids(), AEKeyType.items()), stack);
+        return createConfigInventory(stack);
+    }
+
+    private ConfigInventory createConfigInventory(ItemStack stack) {
+        var holder = new ConfigHolder(stack);
+        holder.inv = ConfigInventory.configTypes(63)
+                .supportedTypes(Set.of(AEKeyType.fluids(), AEKeyType.items()))
+                .slotFilter((slot, what) -> isKeyAllowedInConfig(what, stack))
+                .changeListener(holder::save)
+                .build();
+        holder.load();
+        return holder.inv;
+    }
+
+    private static class ConfigHolder {
+        private final ItemStack stack;
+        private ConfigInventory inv;
+
+        public ConfigHolder(ItemStack stack) {
+            this.stack = stack;
+        }
+
+        public void load() {
+            inv.readFromList(stack.getOrDefault(AEComponents.STORAGE_CELL_CONFIG_INV, List.of()));
+        }
+
+        public void save() {
+            stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, inv.toList());
+        }
+    }
+
+    public static boolean isKeyAllowedInConfig(@Nullable appeng.api.stacks.AEKey what, ItemStack cellStack) {
+        if (what == null) {
+            return false;
+        }
+
+        Fluid fluid = null;
+        if (what instanceof AEFluidKey fluidKey) {
+            fluid = WellDropRegistry.normalizeFluid(fluidKey.getFluid());
+        } else if (what instanceof AEItemKey itemKey) {
+            fluid = WellDropRegistry.extractFluidFromItem(itemKey.toStack());
+            if (fluid != null) {
+                fluid = WellDropRegistry.normalizeFluid(fluid);
+            }
+        }
+
+        // 1. Must resolve to a valid fluid (rejects non-fluid items like netherite blocks, dirt, beacons)
+        if (fluid == null || !WellDropRegistry.isValidFluidTarget(fluid, null)) {
+            return false;
+        }
+
+        // 2. If enforceInventoryCheck is active, verify that the player possesses this fluid in their inventory
+        if (VirtualWellConfig.isInventoryCheckEnforced()) {
+            Player player = findInteractingPlayer(cellStack);
+            if (player != null && !playerHasFluid(player, fluid)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Nullable
+    public static Player findInteractingPlayer(ItemStack cellStack) {
+        if (FMLEnvironment.dist.isClient()) {
+            Player clientPlayer = ClientOnlyHelper.getPlayer();
+            if (clientPlayer != null) {
+                return clientPlayer;
+            }
+        }
+
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                if (player.containerMenu instanceof CellWorkbenchMenu menu) {
+                    if (menu.getWorkbenchItem() == cellStack) {
+                        return player;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static boolean playerHasFluid(Player player, Fluid targetFluid) {
+        if (player.isCreative()) {
+            return true;
+        }
+        Fluid normalized = WellDropRegistry.normalizeFluid(targetFluid);
+
+        // Check carried stack on cursor in menu
+        if (player.containerMenu != null) {
+            ItemStack carried = player.containerMenu.getCarried();
+            if (!carried.isEmpty()) {
+                Fluid extracted = WellDropRegistry.extractFluidFromItem(carried);
+                if (extracted != null && WellDropRegistry.normalizeFluid(extracted).equals(normalized)) {
+                    return true;
+                }
+            }
+        }
+
+        for (ItemStack invStack : player.getInventory().items) {
+            if (invStack.isEmpty()) continue;
+            Fluid extracted = WellDropRegistry.extractFluidFromItem(invStack);
+            if (extracted != null && WellDropRegistry.normalizeFluid(extracted).equals(normalized)) {
+                return true;
+            }
+        }
+        for (ItemStack invStack : player.getInventory().offhand) {
+            if (invStack.isEmpty()) continue;
+            Fluid extracted = WellDropRegistry.extractFluidFromItem(invStack);
+            if (extracted != null && WellDropRegistry.normalizeFluid(extracted).equals(normalized)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static class ClientOnlyHelper {
+        public static Player getPlayer() {
+            return net.minecraft.client.Minecraft.getInstance().player;
+        }
     }
 
     @Override
