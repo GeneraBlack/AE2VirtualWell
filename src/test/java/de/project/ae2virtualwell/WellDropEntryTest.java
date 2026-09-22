@@ -59,5 +59,11 @@ public class WellDropEntryTest {
         int invAmount = inverted.rollAmount(random);
         assertEquals(2000, invAmount, "Should handle min > max gracefully by clamping");
     }
+
+    @Test
+    public void testConfigDefaults() {
+        assertTrue(de.project.ae2virtualwell.config.VirtualWellConfig.isDynamicFallbackEnabled());
+        assertTrue(de.project.ae2virtualwell.config.VirtualWellConfig.isInventoryCheckEnforced());
+    }
 }
 

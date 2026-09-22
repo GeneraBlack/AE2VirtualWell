@@ -8,6 +8,8 @@ public class VirtualWellConfig {
     public static final ModConfigSpec.IntValue BASE_TICK_INTERVAL;
     public static final ModConfigSpec.DoubleValue ENERGY_PER_BUCKET;
     public static final ModConfigSpec.BooleanValue REQUIRE_AE_ENERGY;
+    public static final ModConfigSpec.BooleanValue ENABLE_DYNAMIC_FALLBACK;
+    public static final ModConfigSpec.BooleanValue ENFORCE_INVENTORY_CHECK;
 
     public static final ModConfigSpec.IntValue TIER_1K_MB;
     public static final ModConfigSpec.IntValue TIER_4K_MB;
@@ -31,6 +33,14 @@ public class VirtualWellConfig {
         ENERGY_PER_BUCKET = builder
                 .comment("AE energy consumed per 1,000 mB (1 Bucket) of liquid generated")
                 .defineInRange("energyPerBucket", 10.0, 0.0, 100000.0);
+
+        ENABLE_DYNAMIC_FALLBACK = builder
+                .comment("Whether to automatically generate unconfigured mod fluids as 100% self-drops if no datapack recipe exists. If false, only explicitly configured fluids and builtin drops (water, lava, milk) are allowed.")
+                .define("enableDynamicFallback", true);
+
+        ENFORCE_INVENTORY_CHECK = builder
+                .comment("Whether configuring/partitioning a Well Cell in the Cell Workbench requires the player to have the fluid container in their inventory, preventing JEI ghost-item dragging exploits.")
+                .define("enforceInventoryCheck", true);
 
         builder.pop();
 
@@ -59,5 +69,21 @@ public class VirtualWellConfig {
         builder.pop();
 
         SPEC = builder.build();
+    }
+
+    public static boolean isDynamicFallbackEnabled() {
+        try {
+            return ENABLE_DYNAMIC_FALLBACK.get();
+        } catch (Throwable ignored) {
+            return true;
+        }
+    }
+
+    public static boolean isInventoryCheckEnforced() {
+        try {
+            return ENFORCE_INVENTORY_CHECK.get();
+        } catch (Throwable ignored) {
+            return true;
+        }
     }
 }

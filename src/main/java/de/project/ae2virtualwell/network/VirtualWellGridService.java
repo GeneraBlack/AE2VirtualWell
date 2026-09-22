@@ -84,7 +84,7 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
         }
 
         Fluid target = wellCell.getConfiguredTarget();
-        if (target == null) {
+        if (target == null || !WellDropRegistry.isValidFluidTarget(target, level)) {
             return false;
         }
 
