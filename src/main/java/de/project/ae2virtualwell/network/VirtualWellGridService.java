@@ -129,8 +129,7 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
         double energyPerBucket = baseEnergy * energyMultiplier;
         boolean anyInserted = false;
 
-        boolean globalVoidSecondary = upgrades.isInstalled(ModItems.VOID_SECONDARY_CARD.get())
-                || upgrades.isInstalled(AEItems.VOID_CARD.asItem());
+        boolean globalVoidSecondary = de.project.ae2virtualwell.util.VirtualCellAdapter.hasVoidSecondaryCard(upgrades);
 
         int remainingMb = totalMilliBuckets;
 

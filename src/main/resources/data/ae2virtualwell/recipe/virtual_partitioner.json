@@ -13,14 +13,18 @@
     },
     "S": {
       "item": "minecraft:smooth_stone"
+    },
+    "B": {
+      "item": "minecraft:bucket"
     }
   },
   "pattern": [
     "ICI",
-    "RSR",
+    "RBR",
     "SIS"
   ],
   "result": {
+    "count": 1,
     "id": "ae2virtualwell:virtual_partitioner"
   }
 }
