@@ -284,8 +284,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                     .withStyle(ChatFormatting.GRAY));
         }
 
-        boolean hasVoidSecondary = upgrades.isInstalled(de.project.ae2virtualwell.registry.ModItems.VOID_SECONDARY_CARD.get())
-                || upgrades.isInstalled(appeng.core.definitions.AEItems.VOID_CARD.asItem());
+        boolean hasVoidSecondary = de.project.ae2virtualwell.util.VirtualCellAdapter.hasVoidSecondaryCard(upgrades);
         if (hasVoidSecondary) {
             lines.accept(Component.translatable("tooltip.ae2virtualwell.void_secondary_active")
                     .withStyle(ChatFormatting.DARK_PURPLE));

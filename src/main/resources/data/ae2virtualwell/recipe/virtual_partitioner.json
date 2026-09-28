@@ -13,11 +13,14 @@
     },
     "S": {
       "item": "minecraft:smooth_stone"
+    },
+    "B": {
+      "item": "minecraft:bucket"
     }
   },
   "pattern": [
     "ICI",
-    "RSR",
+    "RBR",
     "SIS"
   ],
   "result": {

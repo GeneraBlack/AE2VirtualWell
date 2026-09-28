@@ -1,20 +1,14 @@
 package de.project.ae2virtualwell.menu;
 
 import appeng.api.ids.AEComponents;
-import appeng.api.stacks.AEFluidKey;
-import appeng.api.stacks.GenericStack;
-import appeng.api.upgrades.UpgradeInventories;
 import appeng.core.definitions.AEItems;
-import de.project.ae2virtualwell.cell.VirtualWellCellItem;
-import de.project.ae2virtualwell.cell.partition.WellCellPartition;
-import de.project.ae2virtualwell.cell.partition.WellCellPartitionList;
-import de.project.ae2virtualwell.config.VirtualWellConfig;
-import de.project.ae2virtualwell.recipe.WellDropRegistry;
+import appeng.api.upgrades.UpgradeInventories;
 import de.project.ae2virtualwell.registry.ModBlocks;
-import de.project.ae2virtualwell.registry.ModDataComponents;
-import de.project.ae2virtualwell.registry.ModItems;
 import de.project.ae2virtualwell.registry.ModMenus;
+import de.project.ae2virtualwell.util.VirtualCellAdapter;
+import de.project.ae2virtualwell.util.VirtualCellAdapter.UniversalPartition;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
@@ -25,8 +19,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.Fluids;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -34,13 +26,13 @@ import java.util.List;
 import java.util.Set;
 
 public class VirtualPartitionerMenu extends AbstractContainerMenu {
+
     private final Container container;
     private final ContainerLevelAccess access;
-
-    private boolean loadingUpgrades = false;
     private ItemStack lastCellInSlot0 = ItemStack.EMPTY;
+    private boolean loadingUpgrades = false;
 
-    private final SimpleContainer upgradeContainer = new SimpleContainer(5) {
+    public final Container upgradeContainer = new SimpleContainer(5) {
         @Override
         public void setChanged() {
             super.setChanged();
@@ -68,7 +60,7 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(container, 0, 16, 20) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getItem() instanceof VirtualWellCellItem;
+                return VirtualCellAdapter.isVirtualStorageCell(stack);
             }
 
             @Override
@@ -115,8 +107,7 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(this.upgradeContainer, 4, 138, 155) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return !container.getItem(0).isEmpty() &&
-                        (stack.is(ModItems.VOID_SECONDARY_CARD.get()) || stack.is(AEItems.VOID_CARD.asItem()));
+                return !container.getItem(0).isEmpty() && VirtualCellAdapter.isVoidSecondaryCard(stack);
             }
 
             @Override
@@ -139,7 +130,7 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
             }
         }
 
-        // Slots 33..41: Player Hotbar (9 slots) - shifted down to y=239
+        // Slots 33..41: Player Hotbar (1 row of 9) - shifted down to y=239
         int hotbarStartY = 239;
         for (int col = 0; col < 9; ++col) {
             this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, hotbarStartY));
@@ -150,34 +141,39 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
 
     private void loadUpgradesFromCell() {
         loadingUpgrades = true;
-        ItemStack cell = this.container.getItem(0);
-        this.lastCellInSlot0 = cell.copy();
+        try {
+            ItemStack cell = this.container.getItem(0);
+            this.lastCellInSlot0 = cell.copy();
 
-        for (int i = 0; i < 5; i++) {
-            this.upgradeContainer.setItem(i, ItemStack.EMPTY);
-        }
+            for (int i = 0; i < 5; i++) {
+                this.upgradeContainer.setItem(i, ItemStack.EMPTY);
+            }
 
-        if (!cell.isEmpty() && cell.getItem() instanceof VirtualWellCellItem) {
-            var upgrades = UpgradeInventories.forItem(cell, 5);
-            if (upgrades != null) {
-                int speedCount = Math.min(4, upgrades.getInstalledUpgrades(AEItems.SPEED_CARD.asItem()));
-                for (int i = 0; i < speedCount; i++) {
-                    this.upgradeContainer.setItem(i, new ItemStack(AEItems.SPEED_CARD.asItem()));
-                }
-
-                if (upgrades.isInstalled(ModItems.VOID_SECONDARY_CARD.get())) {
-                    this.upgradeContainer.setItem(4, new ItemStack(ModItems.VOID_SECONDARY_CARD.get()));
-                } else if (upgrades.isInstalled(AEItems.VOID_CARD.asItem())) {
-                    this.upgradeContainer.setItem(4, new ItemStack(AEItems.VOID_CARD.asItem()));
+            if (!cell.isEmpty() && VirtualCellAdapter.isVirtualStorageCell(cell)) {
+                var upgrades = UpgradeInventories.forItem(cell, 5);
+                if (upgrades != null) {
+                    int speedIdx = 0;
+                    for (int i = 0; i < upgrades.size(); i++) {
+                        ItemStack upgrade = upgrades.getStackInSlot(i);
+                        if (upgrade.isEmpty()) continue;
+                        if (upgrade.is(AEItems.SPEED_CARD.asItem())) {
+                            if (speedIdx < 4) {
+                                this.upgradeContainer.setItem(speedIdx++, upgrade.copyWithCount(1));
+                            }
+                        } else if (VirtualCellAdapter.isVoidSecondaryCard(upgrade)) {
+                            this.upgradeContainer.setItem(4, upgrade.copyWithCount(1));
+                        }
+                    }
                 }
             }
+        } finally {
+            loadingUpgrades = false;
         }
-        loadingUpgrades = false;
     }
 
     private void saveUpgradesToCell() {
         ItemStack cell = this.container.getItem(0);
-        if (cell.isEmpty() || !(cell.getItem() instanceof VirtualWellCellItem)) {
+        if (cell.isEmpty() || !VirtualCellAdapter.isVirtualStorageCell(cell)) {
             return;
         }
 
@@ -195,15 +191,20 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
             cell.set(AEComponents.UPGRADES, net.minecraft.world.item.component.ItemContainerContents.fromItems(upgradeStacks));
         }
         this.container.setChanged();
+        Slot cellSlot = this.slots.get(0);
+        if (cellSlot != null) {
+            cellSlot.setChanged();
+        }
+        broadcastChanges();
     }
 
     @Override
     public void broadcastChanges() {
-        super.broadcastChanges();
         ItemStack currentCell = this.container.getItem(0);
         if (!ItemStack.matches(currentCell, this.lastCellInSlot0)) {
             loadUpgradesFromCell();
         }
+        super.broadcastChanges();
     }
 
     @Override
@@ -229,7 +230,7 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
                 slot.onQuickCraft(slotStack, itemstack);
             } else {
                 // Player inventory slots
-                if (slotStack.getItem() instanceof VirtualWellCellItem) {
+                if (VirtualCellAdapter.isVirtualStorageCell(slotStack)) {
                     if (!this.moveItemStackTo(slotStack, 0, 1, false)) {
                         return ItemStack.EMPTY;
                     }
@@ -238,7 +239,7 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
                     if (!this.moveItemStackTo(slotStack, 1, 5, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if ((slotStack.is(ModItems.VOID_SECONDARY_CARD.get()) || slotStack.is(AEItems.VOID_CARD.asItem())) && !this.container.getItem(0).isEmpty()) {
+                } else if (VirtualCellAdapter.isVoidSecondaryCard(slotStack) && !this.container.getItem(0).isEmpty()) {
                     // Try to insert into void secondary slot (5)
                     if (!this.moveItemStackTo(slotStack, 5, 6, false)) {
                         return ItemStack.EMPTY;
@@ -281,15 +282,14 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
         this.container.stopOpen(player);
     }
 
-    public void applyPartitions(Player player, WellCellPartitionList partitionList) {
+    public void applyPartitions(Player player, List<UniversalPartition> newPartitions) {
         ItemStack cell = this.container.getItem(0);
-        if (cell.isEmpty() || !(cell.getItem() instanceof VirtualWellCellItem)) {
+        if (cell.isEmpty() || !VirtualCellAdapter.isVirtualStorageCell(cell)) {
             return;
         }
 
-        if (partitionList.isEmpty()) {
-            cell.remove(ModDataComponents.PARTITIONS.get());
-            cell.remove(AEComponents.STORAGE_CELL_CONFIG_INV);
+        if (newPartitions == null || newPartitions.isEmpty()) {
+            VirtualCellAdapter.writePartitions(cell, List.of());
             this.container.setChanged();
             if (player.level() != null) {
                 player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -300,62 +300,40 @@ public class VirtualPartitionerMenu extends AbstractContainerMenu {
 
         // Validate partitions
         int totalPercent = 0;
-        Set<Fluid> seen = new HashSet<>();
-        List<WellCellPartition> validList = new ArrayList<>();
-        boolean voidCardInstalled = hasVoidSecondaryCardInstalled(cell);
+        Set<Identifier> seen = new HashSet<>();
+        List<UniversalPartition> validList = new ArrayList<>();
+        boolean voidCardInstalled = VirtualCellAdapter.hasVoidCardInstalled(this.upgradeContainer, cell);
+        boolean isFluid = VirtualCellAdapter.isFluidCell(cell);
 
-        for (WellCellPartition p : partitionList.partitions()) {
-            Fluid fluid = p.target();
-            if (fluid == null || fluid == Fluids.EMPTY || seen.contains(fluid)) {
+        for (UniversalPartition p : newPartitions) {
+            Identifier targetId = p.targetId();
+            if (targetId == null || seen.contains(targetId)) {
                 continue;
             }
 
-            // Reject invalid fluids
-            if (!WellDropRegistry.isValidFluidTarget(fluid, player.level())) {
+            // Reject invalid targets
+            if (!VirtualCellAdapter.isValidTarget(cell, targetId, player.level())) {
                 continue;
             }
 
-            // If inventory possession check is active, verify player holds this fluid
-            if (VirtualWellConfig.isInventoryCheckEnforced() && !player.isCreative()) {
-                if (!VirtualWellCellItem.playerHasFluid(player, fluid)) {
-                    continue;
-                }
-            }
-
-            seen.add(fluid);
+            seen.add(targetId);
             int percent = Math.max(1, Math.min(100, p.percent()));
             totalPercent += percent;
 
             boolean voidSecondary = voidCardInstalled && p.voidSecondary();
-            validList.add(new WellCellPartition(fluid, percent, voidSecondary));
+            validList.add(new UniversalPartition(targetId, isFluid, percent, voidSecondary));
         }
 
         if (totalPercent > 100 || validList.isEmpty()) {
             return;
         }
 
-        WellCellPartitionList cleanList = new WellCellPartitionList(validList);
-        cell.set(ModDataComponents.PARTITIONS.get(), cleanList);
-
-        // Sync legacy AE2 config inv with the primary partition's fluid key
-        Fluid primaryFluid = validList.get(0).target();
-        cell.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(primaryFluid), 1)));
-
+        VirtualCellAdapter.writePartitions(cell, validList);
         this.container.setChanged();
 
         if (player.level() != null) {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.5f, 1.5f);
         }
-    }
-
-    private boolean hasVoidSecondaryCardInstalled(ItemStack cell) {
-        if (this.upgradeContainer.getItem(4).is(ModItems.VOID_SECONDARY_CARD.get())
-                || this.upgradeContainer.getItem(4).is(AEItems.VOID_CARD.asItem())) {
-            return true;
-        }
-        var upgrades = UpgradeInventories.forItem(cell, 5);
-        return upgrades != null && (upgrades.isInstalled(ModItems.VOID_SECONDARY_CARD.get())
-                || upgrades.isInstalled(AEItems.VOID_CARD.asItem()));
     }
 }
