@@ -63,7 +63,7 @@ public class VirtualPartitionerScreen extends AbstractContainerScreen<VirtualPar
     protected void containerTick() {
         super.containerTick();
         ItemStack currentCell = menu.getSlot(0).getItem();
-        if (!ItemStack.isSameItemSameComponents(currentCell, lastCellStack)) {
+        if (!ItemStack.isSameItem(currentCell, lastCellStack) || !java.util.Objects.equals(currentCell.get(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get()), lastCellStack.get(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get()))) {
             lastCellStack = currentCell.copy();
             loadWorkingListFromCell(currentCell);
             dirty = false;
