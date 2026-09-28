@@ -1,5 +1,7 @@
 package de.project.ae2virtualwell.block;
 
+import de.project.ae2virtualwell.util.VirtualCellAdapter;
+
 import de.project.ae2virtualwell.cell.VirtualWellCellItem;
 import de.project.ae2virtualwell.menu.VirtualPartitionerMenu;
 import de.project.ae2virtualwell.registry.ModBlockEntities;
@@ -114,6 +116,6 @@ public class VirtualPartitionerBlockEntity extends BlockEntity implements MenuPr
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        return slot == 0 && stack.getItem() instanceof VirtualWellCellItem;
+        return slot == 0 && VirtualCellAdapter.isVirtualStorageCell(stack);
     }
 }

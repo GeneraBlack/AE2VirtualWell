@@ -19,7 +19,6 @@ import de.project.ae2virtualwell.cell.partition.WellCellPartitionList;
 import de.project.ae2virtualwell.config.VirtualWellConfig;
 import de.project.ae2virtualwell.recipe.WellDropEntry;
 import de.project.ae2virtualwell.recipe.WellDropRegistry;
-import de.project.ae2virtualwell.registry.ModItems;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
@@ -184,7 +183,7 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
 
             // Check if this drop is a secondary byproduct
             boolean isSecondary = rolled.isSecondary();
-            boolean voidThisSecondary = globalVoidSecondary || selectedPartition.voidSecondary();
+            boolean voidThisSecondary = globalVoidSecondary && selectedPartition.voidSecondary();
 
             if (voidThisSecondary && isSecondary) {
                 if (requireEnergy && energyPerBucket > 0) {

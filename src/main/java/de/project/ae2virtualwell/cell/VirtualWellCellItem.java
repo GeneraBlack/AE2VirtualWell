@@ -112,6 +112,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
 
         public void save() {
             stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, inv.toList());
+            stack.remove(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get());
         }
     }
 
