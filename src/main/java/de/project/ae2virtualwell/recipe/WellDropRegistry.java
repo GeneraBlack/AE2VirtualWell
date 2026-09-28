@@ -3,6 +3,7 @@ package de.project.ae2virtualwell.recipe;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.GenericStack;
 import appeng.util.GenericContainerHelper;
+import de.project.ae2virtualwell.cell.WellCellTier;
 import de.project.ae2virtualwell.registry.ModRecipes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -10,6 +11,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.FlowingFluid;
@@ -25,6 +27,31 @@ public class WellDropRegistry {
 
     private static final Map<Fluid, List<WellDropEntry>> BUILTIN_DROPS = new HashMap<>();
     private static final Map<Fluid, List<WellDropEntry>> DYNAMIC_CACHE = new HashMap<>();
+    private static final Map<Fluid, WellDropRecipe> RECIPE_CACHE = new HashMap<>();
+
+    public static void clearCache() {
+        DYNAMIC_CACHE.clear();
+        RECIPE_CACHE.clear();
+    }
+
+    public static void refreshRecipeCache(RecipeManager recipeManager) {
+        RECIPE_CACHE.clear();
+        for (RecipeHolder<?> holder : recipeManager.getRecipes()) {
+            if (holder.value() instanceof WellDropRecipe recipe) {
+                recipe.target().items().forEach(itemHolder -> {
+                    Fluid fluid = extractFluidFromItem(new ItemStack(itemHolder.value()));
+                    if (fluid != null && fluid != Fluids.EMPTY) {
+                        RECIPE_CACHE.put(normalizeFluid(fluid), recipe);
+                    }
+                });
+            }
+        }
+    }
+
+    @Nullable
+    private static WellDropRecipe getCachedRecipe(Fluid target) {
+        return RECIPE_CACHE.get(normalizeFluid(target));
+    }
 
     static {
         registerDefaults();
@@ -75,7 +102,12 @@ public class WellDropRegistry {
             return !DYNAMIC_CACHE.get(normalized).isEmpty();
         }
 
-        // 3. Custom datapack recipes
+        // 3. Recipe cache (fast path without level)
+        if (getCachedRecipe(normalized) != null) {
+            return true;
+        }
+
+        // 4. Custom datapack recipes via Level / Server
         net.minecraft.server.MinecraftServer server = null;
         if (level != null && level.getServer() != null) {
             server = level.getServer();
@@ -99,7 +131,7 @@ public class WellDropRegistry {
             }
         }
 
-        // 4. Dynamic discovery fallback (only if enabled in config)
+        // 5. Dynamic discovery fallback (only if enabled in config)
         return de.project.ae2virtualwell.config.VirtualWellConfig.isDynamicFallbackEnabled();
     }
 
@@ -144,10 +176,10 @@ public class WellDropRegistry {
     }
 
     public static List<WellDropEntry> getDropEntries(Fluid target, @Nullable Level level) {
-        if (target == null || target == Fluids.EMPTY) {
-            return Collections.emptyList();
-        }
+        return getDropEntries(target, level, null);
+    }
 
+    public static List<WellDropEntry> getDropEntries(Fluid target, @Nullable Level level, @Nullable WellCellTier tier) {
         Fluid normalized = normalizeFluid(target);
 
         if (DYNAMIC_CACHE.containsKey(normalized)) {
@@ -178,10 +210,28 @@ public class WellDropRegistry {
                         queryLevel
                 );
                 if (match.isPresent()) {
-                    List<WellDropEntry> recipeDrops = match.get().value().drops();
+                    WellDropRecipe recipe = match.get().value();
+                    if (tier != null) {
+                        int cellTierNumber = tier.ordinal() + 1;
+                        if (cellTierNumber < recipe.minTier()) {
+                            return Collections.emptyList();
+                        }
+                    }
+                    List<WellDropEntry> recipeDrops = recipe.drops();
                     DYNAMIC_CACHE.put(normalized, recipeDrops);
                     return recipeDrops;
                 }
+            }
+        } else {
+            WellDropRecipe cached = getCachedRecipe(normalized);
+            if (cached != null) {
+                if (tier != null) {
+                    int cellTierNumber = tier.ordinal() + 1;
+                    if (cellTierNumber < cached.minTier()) {
+                        return Collections.emptyList();
+                    }
+                }
+                return cached.drops();
             }
         }
 
@@ -211,6 +261,47 @@ public class WellDropRegistry {
         return Collections.emptyList();
     }
 
+    public record RolledDrop(Fluid fluid, int amount, int entryIndex) {
+        public static final RolledDrop EMPTY = new RolledDrop(Fluids.EMPTY, 0, -1);
+
+        public boolean isSecondary() {
+            return entryIndex > 0;
+        }
+
+        public boolean isEmpty() {
+            return fluid == Fluids.EMPTY || amount <= 0;
+        }
+    }
+
+    public static RolledDrop rollDropWithIndex(List<WellDropEntry> entries, RandomSource random) {
+        if (entries == null || entries.isEmpty()) {
+            return RolledDrop.EMPTY;
+        }
+
+        int totalWeight = 0;
+        for (WellDropEntry entry : entries) {
+            totalWeight += entry.weight();
+        }
+
+        if (totalWeight <= 0) {
+            return RolledDrop.EMPTY;
+        }
+
+        int roll = random.nextInt(totalWeight);
+        int current = 0;
+        for (int i = 0; i < entries.size(); i++) {
+            WellDropEntry entry = entries.get(i);
+            current += entry.weight();
+            if (roll < current) {
+                int amount = entry.rollAmount(random);
+                return new RolledDrop(entry.fluid(), amount, i);
+            }
+        }
+
+        WellDropEntry fallback = entries.get(0);
+        return new RolledDrop(fallback.fluid(), fallback.rollAmount(random), 0);
+    }
+
     @Nullable
     public static WellDropEntry rollDrop(List<WellDropEntry> entries, RandomSource random) {
         if (entries == null || entries.isEmpty()) {
@@ -236,9 +327,5 @@ public class WellDropRegistry {
         }
 
         return entries.get(0);
-    }
-
-    public static void clearCache() {
-        DYNAMIC_CACHE.clear();
     }
 }

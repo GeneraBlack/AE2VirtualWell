@@ -252,21 +252,38 @@ public class VirtualWellCellInventory implements IVirtualWellCell {
             return 0;
         }
 
-        Fluid configuredTarget = getConfiguredTarget();
-        if (configuredTarget == null) {
-            return 0;
-        }
-
         Fluid fluid = WellDropRegistry.normalizeFluid(fluidKey.getFluid());
         boolean allowed = false;
-        if (fluid.equals(configuredTarget)) {
-            allowed = true;
-        } else {
-            List<de.project.ae2virtualwell.recipe.WellDropEntry> drops = WellDropRegistry.getDropEntries(configuredTarget, null);
-            for (var entry : drops) {
-                if (WellDropRegistry.normalizeFluid(entry.fluid()).equals(fluid)) {
+
+        var partitionList = getPartitions();
+        if (!partitionList.isEmpty()) {
+            for (var p : partitionList.partitions()) {
+                if (WellDropRegistry.normalizeFluid(p.target()).equals(fluid)) {
                     allowed = true;
                     break;
+                }
+                List<de.project.ae2virtualwell.recipe.WellDropEntry> drops = WellDropRegistry.getDropEntries(p.target(), null);
+                for (var entry : drops) {
+                    if (WellDropRegistry.normalizeFluid(entry.fluid()).equals(fluid)) {
+                        allowed = true;
+                        break;
+                    }
+                }
+                if (allowed) break;
+            }
+        } else {
+            Fluid configuredTarget = getConfiguredTarget();
+            if (configuredTarget != null) {
+                if (fluid.equals(configuredTarget)) {
+                    allowed = true;
+                } else {
+                    List<de.project.ae2virtualwell.recipe.WellDropEntry> drops = WellDropRegistry.getDropEntries(configuredTarget, null);
+                    for (var entry : drops) {
+                        if (WellDropRegistry.normalizeFluid(entry.fluid()).equals(fluid)) {
+                            allowed = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -309,5 +326,26 @@ public class VirtualWellCellInventory implements IVirtualWellCell {
     @Override
     public Component getDescription() {
         return stack.getHoverName();
+    }
+
+    @Override
+    public long getStoredAmountForFluid(Fluid target) {
+        if (target == null || this.storedAmounts.isEmpty()) {
+            return 0;
+        }
+        long total = 0;
+        Fluid normalized = WellDropRegistry.normalizeFluid(target);
+        java.util.Set<Fluid> validFluids = new java.util.HashSet<>();
+        validFluids.add(normalized);
+        List<de.project.ae2virtualwell.recipe.WellDropEntry> drops = WellDropRegistry.getDropEntries(normalized, null);
+        for (var drop : drops) {
+            validFluids.add(WellDropRegistry.normalizeFluid(drop.fluid()));
+        }
+        for (var entry : Object2LongMaps.fastIterable(this.storedAmounts)) {
+            if (entry.getKey() instanceof AEFluidKey fluidKey && validFluids.contains(WellDropRegistry.normalizeFluid(fluidKey.getFluid()))) {
+                total += entry.getLongValue();
+            }
+        }
+        return total;
     }
 }

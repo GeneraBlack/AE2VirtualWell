@@ -10,22 +10,31 @@ import appeng.api.networking.energy.IEnergyService;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.storage.cells.CellState;
 import appeng.api.storage.cells.StorageCell;
+import appeng.api.upgrades.IUpgradeInventory;
+import appeng.api.upgrades.UpgradeInventories;
+import appeng.core.definitions.AEItems;
 import de.project.ae2virtualwell.cell.IVirtualWellCell;
+import de.project.ae2virtualwell.cell.partition.WellCellPartition;
+import de.project.ae2virtualwell.cell.partition.WellCellPartitionList;
 import de.project.ae2virtualwell.config.VirtualWellConfig;
 import de.project.ae2virtualwell.recipe.WellDropEntry;
 import de.project.ae2virtualwell.recipe.WellDropRegistry;
+import de.project.ae2virtualwell.registry.ModItems;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class VirtualWellGridService implements IGridServiceProvider, IVirtualWellGridService {
 
     private final IGrid grid;
     private int tickCounter = 0;
+    private final Map<Integer, Integer> cellProgress = new HashMap<>();
 
     public VirtualWellGridService(IGrid grid) {
         this.grid = grid;
@@ -38,11 +47,9 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
         }
 
         tickCounter++;
-        int interval = VirtualWellConfig.BASE_TICK_INTERVAL.get();
-        if (tickCounter < interval) {
+        if (tickCounter % 5 != 0) {
             return;
         }
-        tickCounter = 0;
 
         IEnergyService energyService = grid.getEnergyService();
         boolean requireEnergy = VirtualWellConfig.REQUIRE_AE_ENERGY.get();
@@ -66,7 +73,7 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
                 for (int i = 0; i < drive.getCellCount(); i++) {
                     StorageCell cell = drive.getOriginalCellInventory(i);
                     if (cell instanceof IVirtualWellCell wellCell) {
-                        altered |= processCell(wellCell, level, energyService, requireEnergy, random);
+                        altered |= tickCell(wellCell, level, energyService, requireEnergy, random);
                     }
                 }
             }
@@ -77,19 +84,38 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
         }
     }
 
-    private boolean processCell(IVirtualWellCell wellCell, Level level, IEnergyService energyService, boolean requireEnergy, RandomSource random) {
-        // 1. If cell is full, stop immediately and do not generate or consume power
+    private boolean tickCell(IVirtualWellCell wellCell, Level level, IEnergyService energyService, boolean requireEnergy, RandomSource random) {
+        IUpgradeInventory upgrades = UpgradeInventories.forItem(wellCell.getItemStack(), 5);
+        int speedCards = Math.min(4, upgrades.getInstalledUpgrades(AEItems.SPEED_CARD.asItem()));
+        int baseInterval = VirtualWellConfig.BASE_TICK_INTERVAL.get();
+
+        int targetInterval = switch (speedCards) {
+            case 1 -> (int) (baseInterval * 0.70);
+            case 2 -> (int) (baseInterval * 0.45);
+            case 3 -> (int) (baseInterval * 0.30);
+            case 4 -> Math.max(10, (int) (baseInterval * 0.20));
+            default -> baseInterval;
+        };
+
+        int key = System.identityHashCode(wellCell.getItemStack());
+        int progress = cellProgress.getOrDefault(key, 0) + 5;
+        if (progress >= targetInterval) {
+            cellProgress.put(key, 0);
+            return processCell(wellCell, level, energyService, requireEnergy, random, speedCards, upgrades);
+        } else {
+            cellProgress.put(key, progress);
+            return false;
+        }
+    }
+
+    private boolean processCell(IVirtualWellCell wellCell, Level level, IEnergyService energyService, boolean requireEnergy, RandomSource random, int speedCards, IUpgradeInventory upgrades) {
+        // 1. If whole cell is full, stop immediately
         if (wellCell.isFull() || wellCell.getStatus() == CellState.FULL) {
             return false;
         }
 
-        Fluid target = wellCell.getConfiguredTarget();
-        if (target == null || !WellDropRegistry.isValidFluidTarget(target, level)) {
-            return false;
-        }
-
-        List<WellDropEntry> dropEntries = WellDropRegistry.getDropEntries(target, level);
-        if (dropEntries.isEmpty()) {
+        WellCellPartitionList partitionList = wellCell.getPartitions();
+        if (partitionList.isEmpty()) {
             return false;
         }
 
@@ -98,37 +124,91 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
             return false;
         }
 
-        double energyPerBucket = VirtualWellConfig.ENERGY_PER_BUCKET.get();
+        double baseEnergy = VirtualWellConfig.ENERGY_PER_BUCKET.get();
+        double energyMultiplier = Math.pow(1.5, speedCards);
+        double energyPerBucket = baseEnergy * energyMultiplier;
         boolean anyInserted = false;
+
+        boolean globalVoidSecondary = upgrades.isInstalled(ModItems.VOID_SECONDARY_CARD.get())
+                || upgrades.isInstalled(AEItems.VOID_CARD.asItem());
+
         int remainingMb = totalMilliBuckets;
 
         while (remainingMb > 0) {
             if (wellCell.isFull() || wellCell.getStatus() == CellState.FULL) {
-                break; // Stop generating, cell is full
-            }
-
-            WellDropEntry entry = WellDropRegistry.rollDrop(dropEntries, random);
-            if (entry == null || entry.fluid() == null) {
                 break;
             }
 
-            int rolledMb = entry.rollAmount(random);
-            int stepMb = Math.min(remainingMb, rolledMb);
-            AEFluidKey key = AEFluidKey.of(entry.fluid());
+            // Weighted selection across partitions (0 to 99)
+            int roll = random.nextInt(100);
+            int cumulative = 0;
+            WellCellPartition selectedPartition = null;
 
-            // Test if the cell has space to accept this liquid
+            for (WellCellPartition p : partitionList.partitions()) {
+                cumulative += p.percent();
+                if (roll < cumulative) {
+                    selectedPartition = p;
+                    break;
+                }
+            }
+
+            if (selectedPartition == null) {
+                remainingMb -= Math.min(remainingMb, 1000);
+                continue;
+            }
+
+            if (wellCell.isPartitionFull(selectedPartition)) {
+                remainingMb -= Math.min(remainingMb, 1000);
+                continue;
+            }
+
+            Fluid target = selectedPartition.target();
+            if (target == null || !WellDropRegistry.isValidFluidTarget(target, level)) {
+                remainingMb -= Math.min(remainingMb, 1000);
+                continue;
+            }
+
+            List<WellDropEntry> dropEntries = WellDropRegistry.getDropEntries(target, level, wellCell.getTier());
+            if (dropEntries.isEmpty()) {
+                remainingMb -= Math.min(remainingMb, 1000);
+                continue;
+            }
+
+            WellDropRegistry.RolledDrop rolled = WellDropRegistry.rollDropWithIndex(dropEntries, random);
+            if (rolled.isEmpty()) {
+                remainingMb -= Math.min(remainingMb, 1000);
+                continue;
+            }
+
+            int rolledMb = Math.max(1, rolled.amount());
+            int stepMb = Math.min(remainingMb, rolledMb);
+
+            // Check if this drop is a secondary byproduct
+            boolean isSecondary = rolled.isSecondary();
+            boolean voidThisSecondary = globalVoidSecondary || selectedPartition.voidSecondary();
+
+            if (voidThisSecondary && isSecondary) {
+                if (requireEnergy && energyPerBucket > 0) {
+                    double energyNeeded = (stepMb / 1000.0) * energyPerBucket;
+                    energyService.extractAEPower(energyNeeded, Actionable.MODULATE, PowerMultiplier.CONFIG);
+                }
+                remainingMb -= stepMb;
+                continue;
+            }
+
+            AEFluidKey key = AEFluidKey.of(rolled.fluid());
+
             long canInsert = wellCell.injectGeneratedFluid(key, stepMb, Actionable.SIMULATE);
             if (canInsert <= 0) {
-                // Cell is full or cannot accept this liquid, stop immediately
-                break;
+                remainingMb -= stepMb;
+                continue;
             }
 
-            // Only consume AE power for fluid that actually fits into the cell
             if (requireEnergy && energyPerBucket > 0) {
                 double energyNeeded = (canInsert / 1000.0) * energyPerBucket;
                 double extracted = energyService.extractAEPower(energyNeeded, Actionable.SIMULATE, PowerMultiplier.CONFIG);
                 if (extracted < energyNeeded) {
-                    break; // Network ran out of power
+                    break;
                 }
                 energyService.extractAEPower(energyNeeded, Actionable.MODULATE, PowerMultiplier.CONFIG);
             }
@@ -136,10 +216,8 @@ public class VirtualWellGridService implements IGridServiceProvider, IVirtualWel
             long inserted = wellCell.injectGeneratedFluid(key, canInsert, Actionable.MODULATE);
             if (inserted > 0) {
                 anyInserted = true;
-                remainingMb -= inserted;
-            } else {
-                break;
             }
+            remainingMb -= stepMb;
         }
 
         if (anyInserted) {
