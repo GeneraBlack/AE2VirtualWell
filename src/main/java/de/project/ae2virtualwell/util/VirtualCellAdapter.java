@@ -115,20 +115,20 @@ public final class VirtualCellAdapter {
     public static long getCellTotalBytes(ItemStack cell) {
         if (cell.isEmpty()) return 0;
         String path = BuiltInRegistries.ITEM.getKey(cell.getItem()).getPath();
-        if (path.startsWith("256k")) return 262144;
-        if (path.startsWith("64k")) return 65536;
-        if (path.startsWith("16k")) return 16384;
-        if (path.startsWith("4k")) return 4096;
+        if (path.contains("256k")) return 262144;
+        if (path.contains("64k")) return 65536;
+        if (path.contains("16k")) return 16384;
+        if (path.contains("4k")) return 4096;
         return 1024;
     }
 
     public static String getCellTierName(ItemStack cell) {
         if (cell.isEmpty()) return "";
         String path = BuiltInRegistries.ITEM.getKey(cell.getItem()).getPath();
-        if (path.startsWith("256k")) return "256k";
-        if (path.startsWith("64k")) return "64k";
-        if (path.startsWith("16k")) return "16k";
-        if (path.startsWith("4k")) return "4k";
+        if (path.contains("256k")) return "256k";
+        if (path.contains("64k")) return "64k";
+        if (path.contains("16k")) return "16k";
+        if (path.contains("4k")) return "4k";
         return "1k";
     }
 
@@ -302,7 +302,7 @@ public final class VirtualCellAdapter {
             Item item = getItem(targetId);
             if (item == null || item == Items.AIR) return false;
             try {
-                Class<?> clazz = Class.forName("de.project.ae2virtualmine.registry.MineDropRegistry");
+                Class<?> clazz = Class.forName("de.project.ae2virtualmine.recipe.MineDropRegistry");
                 Method m = clazz.getMethod("isValidMiningTarget", Item.class, Level.class);
                 return (Boolean) m.invoke(null, item, level);
             } catch (Exception ignored) {
@@ -354,6 +354,9 @@ public final class VirtualCellAdapter {
         }
         if (stack.is(Items.LAVA_BUCKET)) {
             return Fluids.LAVA;
+        }
+        if (stack.is(Items.MILK_BUCKET)) {
+            return net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(stack).map(net.neoforged.neoforge.fluids.FluidStack::getFluid).orElse(null);
         }
         if (stack.getItem() instanceof BucketItem bucket) {
             return normalizeFluid(bucket.content);
