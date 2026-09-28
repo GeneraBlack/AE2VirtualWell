@@ -79,7 +79,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
 
     @Override
     public IUpgradeInventory getUpgrades(ItemStack stack) {
-        return UpgradeInventories.forItem(stack, 4);
+        return UpgradeInventories.forItem(stack, 5);
     }
 
     @Override
@@ -263,22 +263,68 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
             lines.add(Tooltips.typesUsed(0, tier.getTotalTypes()));
         }
 
+        IUpgradeInventory upgrades = getUpgrades(stack);
+        int speedCards = Math.min(4, upgrades.getInstalledUpgrades(appeng.core.definitions.AEItems.SPEED_CARD.asItem()));
+        int baseInterval = VirtualWellConfig.BASE_TICK_INTERVAL.get();
+        int intervalTicks = switch (speedCards) {
+            case 1 -> (int) (baseInterval * 0.70);
+            case 2 -> (int) (baseInterval * 0.45);
+            case 3 -> (int) (baseInterval * 0.30);
+            case 4 -> Math.max(10, (int) (baseInterval * 0.20));
+            default -> baseInterval;
+        };
         int yieldMb = tier.getGenerationMilliBuckets();
-        int intervalTicks = VirtualWellConfig.BASE_TICK_INTERVAL.get();
         double seconds = intervalTicks / 20.0;
 
         lines.add(Component.translatable("tooltip.ae2virtualwell.tier", tier.getTierName())
                 .withStyle(ChatFormatting.AQUA));
-        lines.add(Component.translatable("tooltip.ae2virtualwell.production", yieldMb, String.format(Locale.ROOT, "%.1f", seconds))
-                .withStyle(ChatFormatting.GRAY));
 
-        Fluid configured = getConfiguredFluid(stack);
-        if (configured != null) {
-            lines.add(Component.translatable("tooltip.ae2virtualwell.configured_target", getFluidDisplayName(configured))
-                    .withStyle(ChatFormatting.DARK_AQUA));
+        if (speedCards > 0) {
+            lines.add(Component.translatable("tooltip.ae2virtualwell.production_speed", yieldMb, String.format(Locale.ROOT, "%.1f", seconds), speedCards)
+                    .withStyle(ChatFormatting.AQUA));
         } else {
-            lines.add(Component.translatable("tooltip.ae2virtualwell.not_configured")
-                    .withStyle(ChatFormatting.DARK_GRAY));
+            lines.add(Component.translatable("tooltip.ae2virtualwell.production", yieldMb, String.format(Locale.ROOT, "%.1f", seconds))
+                    .withStyle(ChatFormatting.GRAY));
+        }
+
+        boolean hasVoidSecondary = upgrades.isInstalled(de.project.ae2virtualwell.registry.ModItems.VOID_SECONDARY_CARD.get())
+                || upgrades.isInstalled(appeng.core.definitions.AEItems.VOID_CARD.asItem());
+        if (hasVoidSecondary) {
+            lines.add(Component.translatable("tooltip.ae2virtualwell.void_secondary_active")
+                    .withStyle(ChatFormatting.DARK_PURPLE));
+        }
+
+        if (stack.has(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get())) {
+            var partitionList = stack.get(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get());
+            if (partitionList != null && !partitionList.isEmpty()) {
+                lines.add(Component.translatable("tooltip.ae2virtualwell.partitions_header", partitionList.size())
+                        .withStyle(ChatFormatting.AQUA));
+                for (var p : partitionList.partitions()) {
+                    var line = Component.literal(" ▪ ")
+                            .append(getFluidDisplayName(p.target()).copy().withStyle(ChatFormatting.DARK_AQUA))
+                            .append(Component.literal(" (" + p.percent() + "%)").withStyle(ChatFormatting.GRAY));
+                    if (p.voidSecondary()) {
+                        line.append(Component.literal(" [Void]").withStyle(ChatFormatting.DARK_PURPLE));
+                    }
+                    lines.add(line);
+                }
+                if (partitionList.getUnallocatedPercent() > 0) {
+                    lines.add(Component.literal(" ▪ Unallocated: " + partitionList.getUnallocatedPercent() + "%")
+                            .withStyle(ChatFormatting.DARK_GRAY));
+                }
+            } else {
+                lines.add(Component.translatable("tooltip.ae2virtualwell.not_configured")
+                        .withStyle(ChatFormatting.DARK_GRAY));
+            }
+        } else {
+            Fluid configured = getConfiguredFluid(stack);
+            if (configured != null) {
+                lines.add(Component.translatable("tooltip.ae2virtualwell.configured_target", getFluidDisplayName(configured))
+                        .withStyle(ChatFormatting.DARK_AQUA));
+            } else {
+                lines.add(Component.translatable("tooltip.ae2virtualwell.not_configured")
+                        .withStyle(ChatFormatting.DARK_GRAY));
+            }
         }
     }
 
@@ -353,6 +399,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                 if (!level.isClientSide()) {
                     ItemStack stack = context.getItemInHand();
                     stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
+                    stack.remove(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get());
                     player.displayClientMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
                             getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA), true);
                 }
@@ -375,6 +422,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                 if (WellDropRegistry.isValidFluidTarget(fluid)) {
                     if (!level.isClientSide()) {
                         stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
+                        stack.remove(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get());
                         player.displayClientMessage(Component.translatable("message.ae2virtualwell.configured",
                                 getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA), true);
                     }
@@ -392,6 +440,7 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
                     if (WellDropRegistry.isValidFluidTarget(fluid)) {
                         if (!level.isClientSide()) {
                             stack.set(AEComponents.STORAGE_CELL_CONFIG_INV, List.of(new GenericStack(AEFluidKey.of(fluid), 1)));
+                            stack.remove(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get());
                             player.displayClientMessage(Component.translatable("message.ae2virtualwell.sampled_configured",
                                     getFluidDisplayName(fluid)).withStyle(ChatFormatting.AQUA), true);
                         }
@@ -403,7 +452,13 @@ public class VirtualWellCellItem extends Item implements ICellWorkbenchItem {
             // 3. Clear configuration only when clicking air with empty off-hand away from fluids
             if (otherStack.isEmpty()) {
                 if (!level.isClientSide()) {
+                    StorageCell cell = StorageCells.getCellInventory(stack, null);
+                    if (cell instanceof VirtualWellCellInventory wellInv && wellInv.getStoredFluidTypes() > 0) {
+                        player.displayClientMessage(Component.translatable("message.ae2virtualwell.clear_blocked").withStyle(ChatFormatting.RED), true);
+                        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+                    }
                     stack.remove(AEComponents.STORAGE_CELL_CONFIG_INV);
+                    stack.remove(de.project.ae2virtualwell.registry.ModDataComponents.PARTITIONS.get());
                     player.displayClientMessage(Component.translatable("message.ae2virtualwell.cleared")
                             .withStyle(ChatFormatting.RED), true);
                 }

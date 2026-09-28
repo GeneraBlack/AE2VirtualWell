@@ -5,6 +5,7 @@ import de.project.ae2virtualwell.cell.VirtualWellCellItem;
 import de.project.ae2virtualwell.cell.WellCellTier;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModItems {
@@ -37,4 +38,13 @@ public class ModItems {
             ITEMS.register("well_storage_cell_64k", () -> new VirtualWellCellItem(WellCellTier.TIER_64K, new Item.Properties()));
     public static final DeferredHolder<Item, VirtualWellCellItem> WELL_CELL_256K =
             ITEMS.register("well_storage_cell_256k", () -> new VirtualWellCellItem(WellCellTier.TIER_256K, new Item.Properties()));
+
+    // Upgrade Cards
+    public static final DeferredItem<Item> VOID_SECONDARY_CARD =
+            ITEMS.registerItem("void_secondary_card", appeng.api.upgrades.Upgrades::createUpgradeCardItem);
+
+    // Blocks
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> VIRTUAL_PARTITIONER =
+            ITEMS.registerSimpleBlockItem(ModBlocks.VIRTUAL_PARTITIONER);
 }
+

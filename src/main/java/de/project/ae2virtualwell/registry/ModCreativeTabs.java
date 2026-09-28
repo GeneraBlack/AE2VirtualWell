@@ -17,6 +17,8 @@ public class ModCreativeTabs {
                     .title(Component.translatable("itemGroup.ae2virtualwell"))
                     .icon(() -> new ItemStack(ModItems.WELL_CELL_4K.get()))
                     .displayItems((parameters, output) -> {
+                        output.accept(ModItems.VIRTUAL_PARTITIONER.get());
+                        output.accept(ModItems.VOID_SECONDARY_CARD.get());
                         output.accept(ModItems.WELL_CELL_HOUSING.get());
                         output.accept(ModItems.WELL_COMPONENT_1K.get());
                         output.accept(ModItems.WELL_COMPONENT_4K.get());

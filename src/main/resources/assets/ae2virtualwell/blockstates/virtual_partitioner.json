@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "ae2virtualwell:block/virtual_partitioner"
+    },
+    "facing=south": {
+      "model": "ae2virtualwell:block/virtual_partitioner",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "ae2virtualwell:block/virtual_partitioner",
+      "y": 270
+    },
+    "facing=east": {
+      "model": "ae2virtualwell:block/virtual_partitioner",
+      "y": 90
+    }
+  }
+}
