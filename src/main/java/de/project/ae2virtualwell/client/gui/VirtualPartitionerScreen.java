@@ -51,6 +51,7 @@ public class VirtualPartitionerScreen extends AbstractContainerScreen<VirtualPar
 
     private final List<PartitionDraft> workingList = new ArrayList<>();
     private ItemStack lastCellStack = ItemStack.EMPTY;
+    private List<VirtualCellAdapter.UniversalPartition> lastPartitions = List.of();
     private boolean dirty = false;
     private int selectedRowForPicker = -1;
     private int scrollOffset = 0;
