@@ -41,7 +41,7 @@ public interface IVirtualWellCell extends StorageCell {
         }
         Fluid single = getConfiguredTarget();
         if (single != null) {
-            return new WellCellPartitionList(List.of(new WellCellPartition(single, 100, false)));
+            return new WellCellPartitionList(List.of(new WellCellPartition(single, 100, true)));
         }
         return WellCellPartitionList.EMPTY;
     }
