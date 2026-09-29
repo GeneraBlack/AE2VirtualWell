@@ -1,12 +1,9 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "ae2:cell_component_1k" },
-    { "item": "minecraft:bucket" },
-    { "item": "minecraft:copper_ingot" }
-  ],
-  "result": {
-    "id": "ae2virtualwell:well_cell_component_1k",
-    "count": 1
-  }
+    "type": "minecraft:crafting_shapeless",
+    "ingredients": [
+        "ae2:cell_component_1k",
+        "minecraft:bucket",
+        "minecraft:copper_ingot"
+    ],
+    "result": "ae2virtualwell:well_cell_component_1k"
 }

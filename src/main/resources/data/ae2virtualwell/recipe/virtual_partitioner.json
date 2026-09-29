@@ -1,29 +1,17 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "misc",
-  "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
+    "type": "minecraft:crafting_shaped",
+    "category": "misc",
+    "key": {
+        "I": "minecraft:iron_ingot",
+        "C": "minecraft:comparator",
+        "R": "minecraft:redstone",
+        "S": "minecraft:smooth_stone",
+        "B": "minecraft:bucket"
     },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "S": {
-      "item": "minecraft:smooth_stone"
-    },
-    "B": {
-      "item": "minecraft:bucket"
-    }
-  },
-  "pattern": [
-    "ICI",
-    "RBR",
-    "SIS"
-  ],
-  "result": {
-    "id": "ae2virtualwell:virtual_partitioner"
-  }
+    "pattern": [
+        "ICI",
+        "RBR",
+        "SIS"
+    ],
+    "result": "ae2virtualwell:virtual_partitioner"
 }

@@ -1,19 +1,10 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "category": "misc",
-  "ingredients": [
-    {
-      "item": "ae2:basic_card"
-    },
-    {
-      "item": "minecraft:bucket"
-    },
-    {
-      "item": "minecraft:lava_bucket"
-    }
-  ],
-  "result": {
-    "count": 1,
-    "id": "ae2virtualwell:void_secondary_card"
-  }
+    "type": "minecraft:crafting_shapeless",
+    "category": "misc",
+    "ingredients": [
+        "ae2:basic_card",
+        "minecraft:bucket",
+        "minecraft:lava_bucket"
+    ],
+    "result": "ae2virtualwell:void_secondary_card"
 }

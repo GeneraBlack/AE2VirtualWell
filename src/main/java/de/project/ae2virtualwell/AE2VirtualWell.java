@@ -60,6 +60,7 @@ public class AE2VirtualWell {
 
         // Refresh recipe cache and clear dynamic cache when tags/datapacks update
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.TagsUpdatedEvent event) -> {
+            de.project.ae2virtualwell.recipe.WellDropRegistry.ensureInitialized();
             de.project.ae2virtualwell.recipe.WellDropRegistry.clearCache();
             var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server != null) {

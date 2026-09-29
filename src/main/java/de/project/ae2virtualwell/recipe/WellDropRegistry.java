@@ -53,8 +53,14 @@ public class WellDropRegistry {
         return RECIPE_CACHE.get(normalizeFluid(target));
     }
 
-    static {
+    private static volatile boolean initialized = false;
+
+    public static void ensureInitialized() {
+        if (!initialized) {
+            initialized = true;
         registerDefaults();
+    
+        }
     }
 
     private static void registerDefaults() {
@@ -87,6 +93,7 @@ public class WellDropRegistry {
     }
 
     public static boolean isValidFluidTarget(@Nullable Fluid fluid, @Nullable Level level) {
+        ensureInitialized();
         if (fluid == null || fluid == Fluids.EMPTY) {
             return false;
         }
@@ -136,6 +143,7 @@ public class WellDropRegistry {
     }
 
     public static boolean isValidFluidTarget(@Nullable Fluid fluid) {
+        ensureInitialized();
         return isValidFluidTarget(fluid, null);
     }
 
@@ -176,10 +184,12 @@ public class WellDropRegistry {
     }
 
     public static List<WellDropEntry> getDropEntries(Fluid target, @Nullable Level level) {
+        ensureInitialized();
         return getDropEntries(target, level, null);
     }
 
     public static List<WellDropEntry> getDropEntries(Fluid target, @Nullable Level level, @Nullable WellCellTier tier) {
+        ensureInitialized();
         Fluid normalized = normalizeFluid(target);
 
         if (DYNAMIC_CACHE.containsKey(normalized)) {
